@@ -1,0 +1,134 @@
+6002025-11-24 11:38:19,754 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 11:42:52,234 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 11:44:22,581 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 11:45:39,980 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 11:46:29,119 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 11:49:38,380 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 12:10:35,325 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 12:11:29,603 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 12:14:10,496 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 13:58:46,917 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 13:58:57,314 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 13:59:08,327 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 13:59:57,776 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 14:01:23,642 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 14:03:11,926 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 14:28:59,141 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 14:30:12,003 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:29:13,496 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:31:56,785 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:38:26,360 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:41:47,782 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:43:28,775 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:43:38,943 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:51:19,687 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:53:28,173 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:56:03,479 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 18:59:17,215 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 19:00:51,622 [INFO] models: File read and validated: data_fixed_width.txt
+2025-11-24 19:08:13,453 [INFO] models: File read and validated: test1
+2025-11-24 19:09:02,335 [INFO] models: File read and validated: test1
+2025-11-24 19:09:33,405 [INFO] models: File read and validated: test1
+2025-11-24 19:14:16,469 [INFO] models: File read and validated: test1
+2025-11-24 19:18:40,915 [INFO] models: File read and validated: test_add
+2025-11-24 19:24:52,999 [INFO] models: File read and validated: test_add
+2025-11-24 19:26:27,801 [INFO] models: File read and validated: test_add
+2025-11-24 19:31:32,819 [INFO] models: File read and validated: test_add
+2025-11-24 19:36:09,177 [INFO] models: File read and validated: test_add
+2025-11-24 19:37:23,714 [INFO] models: File read and validated: test_add
+2025-11-24 19:38:59,877 [INFO] models: File read and validated: test_add
+2025-11-24 20:24:17,947 [WARNING] models: Błędy wczytania pliku test1
+2025-11-24 20:24:17,948 [ERROR] models: Transaction 3: Transaction amount niepoprawny
+2025-11-24 20:24:17,949 [ERROR] models: Footer control_sum (4369) != suma transakcji (4370)
+2025-11-24 20:24:32,050 [INFO] models: Odczyt rekordu 1[amount] = 2137
+2025-11-24 20:25:01,059 [INFO] models: Dodano transakcję: counter=4 amount=3344 currency=EUR
+2025-11-24 20:25:16,948 [INFO] models: Zapisano plik test1
+2025-11-24 20:25:29,529 [INFO] models: Zmieniono rekord 1[currency] = PLN
+2025-11-24 20:27:15,700 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 20:30:27,198 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 20:30:40,764 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 20:30:47,102 [INFO] models: Usunięto rekord 1: counter=1, amount=2137, currency=PLN, reserved=''
+2025-11-24 20:37:32,989 [INFO] models: Zmieniono rekord 0[name]: Filip -> T
+2025-11-24 20:38:00,651 [INFO] models: Zmieniono rekord 0[name]: T -> ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+2025-11-24 20:38:18,858 [INFO] models: Zapisano plik test1
+2025-11-24 20:38:25,077 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 20:38:57,824 [INFO] models: Zmieniono rekord 0[name]: ffffffffffffffffffffffffffff -> fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+2025-11-24 20:39:04,423 [INFO] models: Zapisano plik test1
+2025-11-24 20:39:14,371 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 20:50:17,062 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 20:50:33,207 [INFO] models: Zmieniono rekord 0[name]: ffffffffffffffffffffffffffff -> ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+2025-11-24 21:00:35,956 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:02:30,149 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:02:41,630 [INFO] models: Zmieniono rekord 1[amount]: 2233 -> 111111111111111111111111111111111111111111111111
+2025-11-24 21:05:09,782 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:05:52,089 [INFO] models: Dodano transakcję: counter=5 amount=333333333333333333333333333333333333333333333333333333333333333 currency=PLN
+2025-11-24 21:13:42,609 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:15:35,431 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:19:55,186 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:20:04,895 [ERROR] models: Niepoprawna wartość pola 'amount': Amount '11111111111111111111111111111111111111111111111111111111' za duży, max 12 cyfr
+2025-11-24 21:20:45,428 [WARNING] __main__: Niepoprawny wybór waluty: invalid literal for int() with base 10: 'pln'
+2025-11-24 21:21:00,617 [WARNING] __main__: Niepoprawny wybór waluty: invalid literal for int() with base 10: ''
+2025-11-24 21:22:06,856 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:22:16,959 [WARNING] __main__: Nieudana próba dodania transakcji: Amount '11111111111111111111111111111111111111' za duży, max 12 cyfr
+2025-11-24 21:23:09,136 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:23:15,445 [WARNING] __main__: Nieudana próba dodania transakcji: Amount '111111111111111111111111111111111111111111111111111' za duży, max 12 cyfr
+2025-11-24 21:24:30,520 [INFO] models: Dodano transakcję: counter=5 amount=21.37 currency=EUR
+2025-11-24 21:40:15,159 [INFO] models: Plik test1 wczytany poprawnie
+2025-11-24 21:40:25,897 [INFO] models: Record updated: index=1 field=currency old=EUR new=USD
+2025-11-24 21:40:32,917 [INFO] models: Record updated: index=1 field=reserved old= new=wSEFTGW2FGWG
+2025-11-24 21:40:59,758 [WARNING] models: Transaction 2[amount] validation failed: Amount '111111111111111111111111111111111111111111111111' za duży, max 12 cyfr
+2025-11-24 21:40:59,758 [WARNING] __main__: Nieudana próba ustawienia rekordu 1[amount]: Amount '111111111111111111111111111111111111111111111111' za duży, max 12 cyfr
+2025-11-24 21:48:46,449 [INFO] models: Odczyt rekordu 1[field_id] = 02
+2025-11-24 21:48:58,058 [WARNING] models: Błędy wczytania pliku data.txt
+2025-11-24 21:48:58,058 [ERROR] models: Header line length mismatch: 101
+2025-11-24 21:48:58,058 [ERROR] models: Footer line length mismatch: 28
+2025-11-24 21:48:58,058 [ERROR] models: Transaction 1: Transaction line length mismatch: 31
+2025-11-24 21:48:58,058 [ERROR] models: Transaction 2: Transaction line length mismatch: 31
+2025-11-24 21:48:58,058 [ERROR] models: Transaction 3: Transaction line length mismatch: 31
+2025-11-24 22:00:39,156 [INFO] models: Plik wczytany poprawnie
+2025-11-24 22:01:01,631 [ERROR] __main__: Błąd przy ustawianiu rekordu 1[amount]: [<class 'decimal.ConversionSyntax'>]
+Traceback (most recent call last):
+  File "C:\Users\Folga\PycharmProjects\py-fixed_width-library\fixedwidth_app\cli.py", line 233, in handle_set_loaded
+    fw.set_record(idx, field, val)
+  File "C:\Users\Folga\PycharmProjects\py-fixed_width-library\fixedwidth_app\models.py", line 327, in set_record
+    tx.amount = Decimal(value)
+                ^^^^^^^^^^^^^^
+decimal.InvalidOperation: [<class 'decimal.ConversionSyntax'>]
+2025-11-24 22:02:49,046 [ERROR] models: Błąd odczytu pliku test
+Traceback (most recent call last):
+  File "C:\Users\Folga\PycharmProjects\py-fixed_width-library\fixedwidth_app\models.py", line 254, in read_file
+    with open(path, "r", newline=None) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: 'test'
+2025-11-24 22:02:57,354 [INFO] models: Plik wczytany poprawnie
+2025-11-24 22:03:06,235 [WARNING] models: Nieprawidłowa kwota: test
+2025-11-24 22:03:06,236 [WARNING] __main__: Nieudana próba ustawienia rekordu 1[amount]: Nieprawidłowa wartość amount: test
+2025-11-24 22:04:07,224 [INFO] models: Plik wczytany poprawnie
+2025-11-24 22:07:21,929 [WARNING] models: Transaction 1[amount] validation failed: Amount '11111111111111111111111111111111111' za duży, max 12 cyfr w centach
+2025-11-24 22:07:21,929 [WARNING] __main__: Nieudana próba ustawienia rekordu 1[amount]: Amount '11111111111111111111111111111111111' za duży, max 12 cyfr w centach
+2025-11-24 22:07:41,281 [INFO] models: Transaction added: counter=3 amount=123 currency=EUR
+2025-11-24 22:07:41,281 [INFO] __main__: Dodano transakcję: counter=3 amount=123 currency=EUR
+2025-11-24 22:07:50,612 [WARNING] models: Walidacja nie powiodła się dla pola 'name': 94 > 28
+2025-11-24 22:07:50,612 [WARNING] models: Header[name] validation failed: Wartość pola 'name' jest za długa (94 > 28)
+2025-11-24 22:07:50,612 [WARNING] __main__: Nieudana próba ustawienia rekordu 0[name]: Wartość pola 'name' jest za długa (94 > 28)
+2025-11-24 22:11:59,425 [INFO] models: Plik wczytany poprawnie
+2025-11-24 22:12:01,246 [ERROR] models: Nie udało się zapisać pliku test1
+Traceback (most recent call last):
+  File "C:\Users\Folga\PycharmProjects\py-fixed_width-library\fixedwidth_app\models.py", line 283, in write_file
+    f.write(self.footer.write_line() + "\n")
+            ^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: Footer.write_line() missing 2 required positional arguments: 'total_counter' and 'control_sum'
+2025-11-24 22:13:58,307 [WARNING] models: Walidacja nie powiodła się dla pola 'reserved': 100 > 92
+2025-11-24 22:14:12,460 [WARNING] models: Walidacja nie powiodła się dla pola 'reserved': 100 > 92
+2025-11-24 22:14:29,187 [INFO] models: Plik wczytany poprawnie
+2025-11-24 22:14:31,088 [INFO] models: Plik zapisano poprawnie: test_add
+2025-11-24 22:17:09,836 [WARNING] models: Walidacja nie powiodła się dla pola 'reserved': 100 > 92
+2025-11-24 22:17:52,853 [INFO] models: Plik wczytany poprawnie
+2025-11-24 22:29:44,038 [INFO] models: Transaction added: counter=4 amount=123.65 currency=EUR
+2025-11-24 22:29:44,038 [INFO] __main__: Dodano transakcję: counter=4 amount=123.65 currency=EUR
+2025-11-24 22:29:54,030 [INFO] models: Transaction added: counter=5 amount=0.12354 currency=EUR
+2025-11-24 22:29:54,031 [INFO] __main__: Dodano transakcję: counter=5 amount=0.12354 currency=EUR
+2025-11-24 22:32:12,842 [INFO] models: Plik wczytany poprawnie
+2025-11-24 22:32:22,789 [WARNING] __main__: Nieudana próba dodania transakcji: Transaction amount '0.12345' może mieć maks. 2 miejsca po przecinku
+2025-11-24 22:32:59,430 [WARNING] models: Nieprawidłowa kwota: 
+2025-11-24 22:32:59,430 [WARNING] __main__: Nieudana próba ustawienia rekordu 2[amount]: Nieprawidłowa wartość amount: 
