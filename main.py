@@ -35,7 +35,9 @@ def main():
 
         choice = input("> ").strip()
         if choice == "1":
-            crud.create_file()
+            fw, path = crud.create_file()
+            if fw:
+                edit_menu(fw, path)
         elif choice == "2":
             fw, path = handle_open()
             if fw:

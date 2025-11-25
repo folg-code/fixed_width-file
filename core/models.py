@@ -60,6 +60,33 @@ class FixedWidthRecord:
             else:
                 continue
 
+    @classmethod
+    def read_line(cls, line: str):
+
+        errors: List[str] = []
+        if len(line) != LINE_LENGTH:
+            raise LineLengthMismatch(
+                f"{cls.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}"
+            )
+
+        start = 0
+        field_values: Dict[str, str] = {}
+        for fname, finfo in cls.FIELD_DEF.items():
+            width = finfo["width"]
+            raw = line[start:start + width]
+            start += width
+            if "value" in finfo:
+                value = raw.strip()
+                if value != finfo["value"]:
+                    errors.append(f"{cls.__name__}.{fname}: expected '{finfo['value']}', got '{value}'")
+            else:
+                value = raw.strip()
+            field_values[fname] = value
+
+        obj = cls(**field_values)
+        obj.coerce_types(errors)
+        return obj, errors
+
     def write_line(self) -> str:
         parts = []
         for fname, finfo in self.FIELD_DEF.items():
@@ -92,31 +119,6 @@ class FixedWidthRecord:
             if len(str(val)) > width:
                 errors.append(f"{fname}: length {len(str(val))} > {width}")
         return errors
-
-    @classmethod
-    def read_line(cls, line: str):
-
-        errors: List[str] = []
-        if len(line) != LINE_LENGTH:
-            raise LineLengthMismatch(
-                f"{cls.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}"
-            )
-
-        start = 0
-        field_values: Dict[str, str] = {}
-        for fname, finfo in cls.FIELD_DEF.items():
-            width = finfo["width"]
-            raw = line[start:start + width]
-            start += width
-            if "value" in finfo:
-                value = raw
-            else:
-                value = raw.strip()
-            field_values[fname] = value
-
-        obj = cls(**field_values)
-        obj.coerce_types(errors)
-        return obj, errors
 
 
 @dataclass
@@ -285,9 +287,8 @@ class FixedWidthFile:
             try:
                 self.header.validate()
             except HeaderValidationError as e:
-                errors.append(str(e))
-            else:
-                errors.append("Header: missing or invalid")
+                print("DEBUG HEADER ERROR:", e)
+                errors.append(f"Header validation error: {e}")
 
         # --- Transactions ---
         for i, tx in enumerate(self.transactions, start=1):
@@ -453,12 +454,27 @@ class FixedWidthFile:
         )
 
     def recalculate_footer(self):
-        if self.footer is None:
-            # jeśli footer nie istnieje, stwórz prosty obiekt
-            placeholder_vals = {k: "" for k in Footer.FIELD_DEF.keys()}
-            self.footer = Footer(**placeholder_vals)
-        self.footer.total_counter = len(self.transactions)
-        self.footer.control_sum = sum(t.amount for t in self.transactions)
+        if not hasattr(self, "footer") or self.footer is None:
+            raise ValueError("Footer record is missing")
+
+        total_count = len(self.transactions)
+        total_amount_cents = 0
+
+        for tx in self.transactions:
+            # amount w tx jest Decimal w jednostkach zł / usd / etc.
+            # żeby dostać grosze, mnożymy *100 i zamieniamy na int
+            total_amount_cents += int((tx.amount * 100).to_integral_value())
+
+        # footer: total_cnt jako int, control_sum jako Decimal w groszach
+        self.footer.total_cnt = total_count
+        # ustawiamy control_sum **bez dzielenia przez 100**, bo write_line zajmie się formatowaniem
+        self.footer.control_sum = Decimal(total_amount_cents)
+
+        logger.info(
+            "Footer recalculated: total_cnt=%d, control_sum=%s",
+            self.footer.total_cnt,
+            self.footer.control_sum,
+        )
 
     @classmethod
     def create_empty(cls, name="", surname="", patronymic="", address=""):
