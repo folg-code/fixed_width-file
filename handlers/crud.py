@@ -8,7 +8,6 @@ from core.models import FixedWidthFile, logger, Header, Footer
 from ui.selection import select_currency, select_field, select_record
 
 setup_logging()
-logger = logging.getLogger(__name__)
 
 
 # ---------------- CREATE ----------------

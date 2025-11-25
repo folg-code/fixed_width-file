@@ -1,8 +1,7 @@
 import logging
 
-
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from typing import List, Dict
 
 from core.const import (
@@ -15,9 +14,10 @@ from core.errors import (
     AmountTooLargeError, MaxTransactionLimitError,
     AtomicUpdateError, ValidationError, FooterValidationError,
     TransactionValidationError, HeaderValidationError,
-    EmptyFileError )
+    EmptyFileError)
 
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class FixedWidthRecord:
@@ -60,7 +60,6 @@ class FixedWidthRecord:
             else:
                 continue
 
-
     def write_line(self) -> str:
         parts = []
         for fname, finfo in self.FIELD_DEF.items():
@@ -69,12 +68,10 @@ class FixedWidthRecord:
             field_type = finfo.get("type", "str")
 
             if "value" in finfo:
-                # fixed constant from FIELD_DEF
                 val = finfo["value"]
             elif field_type == "int":
                 val = str(int(val)).zfill(width)
             elif field_type == "decimal":
-                # oczekujemy Decimal lub liczby
                 cents = int((Decimal(val) * 100).to_integral_value())
                 val = str(cents).zfill(width)
             else:
@@ -87,7 +84,6 @@ class FixedWidthRecord:
                 f"{self.__class__.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}")
         return line
 
-
     def validate_fields(self):
         errors = []
         for fname, finfo in self.FIELD_DEF.items():
@@ -97,13 +93,14 @@ class FixedWidthRecord:
                 errors.append(f"{fname}: length {len(str(val))} > {width}")
         return errors
 
-
     @classmethod
     def read_line(cls, line: str):
 
         errors: List[str] = []
         if len(line) != LINE_LENGTH:
-            raise LineLengthMismatch(f"{cls.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}")
+            raise LineLengthMismatch(
+                f"{cls.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}"
+            )
 
         start = 0
         field_values: Dict[str, str] = {}
@@ -112,7 +109,6 @@ class FixedWidthRecord:
             raw = line[start:start + width]
             start += width
             if "value" in finfo:
-                # zachowaj exact raw (może zawierać znaczenie)
                 value = raw
             else:
                 value = raw.strip()
@@ -157,9 +153,13 @@ class Transaction(FixedWidthRecord):
         if self.counter <= 0:
             errors.append("Transaction counter <= 0")
         if self.currency not in ALLOWED_CURRENCIES:
-            errors.append(f"Transaction currency '{self.currency}' niepoprawna")
+            errors.append(
+                f"Transaction currency '{self.currency}' niepoprawna"
+            )
         if self.amount <= 0:
-            errors.append(f"Transaction amount must be positive: {self.amount}")
+            errors.append(
+                f"Transaction amount must be positive: {self.amount}"
+            )
 
         if errors:
             raise TransactionValidationError("; ".join(errors))
@@ -184,7 +184,12 @@ class Footer(FixedWidthRecord):
 
 
 class FixedWidthFile:
-    def __init__(self, header: Header, transactions: List[Transaction], footer: Footer):
+    def __init__(
+            self,
+            header: Header,
+            transactions: List[Transaction],
+            footer: Footer
+    ) -> None :
         self.header = header
         self.transactions = transactions
         self.footer = footer
@@ -250,7 +255,6 @@ class FixedWidthFile:
             except LineLengthMismatch as e:
                 # traktujemy to jako błąd struktury dla danej linii
                 _read_errors["transactions"].append((idx, [str(e)]))
-                # aby zachować pozycje i indeksy, wstawiamy placeholder Transaction z defaultami
                 placeholder_vals = {k: "" for k in Transaction.FIELD_DEF.keys()}
                 tx = Transaction(**placeholder_vals)
                 transactions.append(tx)
@@ -264,7 +268,9 @@ class FixedWidthFile:
         fw._read_errors = _read_errors
 
         if any(_read_errors.values()):
-            logger.warning("File loaded, but errors were found in structure/content")
+            logger.warning(
+                "File loaded, but errors were found in structure/content"
+            )
         else:
             logger.info("File loaded successfully (structure OK)")
 
@@ -344,7 +350,9 @@ class FixedWidthFile:
             readonly = READONLY_FIELDS[-1]
         else:
             if not (1 <= record_index <= len(self.transactions)):
-                raise InvalidRecordIndexError(f"Invalid transaction index: {record_index}")
+                raise InvalidRecordIndexError(
+                    f"Invalid transaction index: {record_index}"
+                )
             obj = self.transactions[record_index - 1]
             readonly = READONLY_FIELDS["tx"]
 
@@ -352,13 +360,10 @@ class FixedWidthFile:
             if f in readonly:
                 raise ReadOnlyFieldUpdateError(f"Field '{f}' is read-only")
 
-        # --- zapamiętaj stare wartości ---
         old_values = {f: getattr(obj, f) for f in updates}
 
-        # Tymczasowe zastosowanie zmian
         try:
             for field, value in updates.items():
-                # konwersje typów specyficzne dla Transaction
                 if isinstance(obj, Transaction):
                     if field == "amount":
                         value = Decimal(value)
@@ -369,21 +374,23 @@ class FixedWidthFile:
 
             field_len_errors = obj.validate_fields()
             if field_len_errors:
-                raise AtomicUpdateError(f"Field length validation failed: {field_len_errors}")
+                raise AtomicUpdateError(
+                    f"Field length validation failed: {field_len_errors}"
+                )
 
-            # dodatkowa biznesowa walidacja
             try:
                 obj.validate()
             except ValidationError as e:
-                raise AtomicUpdateError(f"Business validation failed after update: {e}")
+                raise AtomicUpdateError(
+                    f"Business validation failed after update: {e}"
+                )
 
         except AtomicUpdateError:
-            # rollback (już w except)
             for field, old in old_values.items():
                 setattr(obj, field, old)
             raise
+
         except Exception as e:
-            # rollback i opakuj błąd
             for field, old in old_values.items():
                 setattr(obj, field, old)
             raise AtomicUpdateError(f"Atomic update failed: {e}")
@@ -392,19 +399,32 @@ class FixedWidthFile:
             self.recalculate_footer()
 
         logger.info(
-            "Record updated atomically: idx=%s updates=%s", record_index, updates
+            "Record updated atomically: idx=%s updates=%s",
+            record_index, updates
         )
 
-    def add_transaction(self, amount: Decimal, currency: str, reserved: str = ""):
+    def add_transaction(
+            self,
+            amount: Decimal,
+            currency: str,
+            reserved: str = ""
+    ) -> None:
         cents = int((amount * 100).to_integral_value())
         if len(str(abs(cents))) > 12:
-            raise AmountTooLargeError("Amount too large: max 12 digits including cents")
+            raise AmountTooLargeError(
+                "Amount too large: max 12 digits including cents"
+            )
 
         next_counter = 1 + (self.transactions[-1].counter if self.transactions else 0)
         if next_counter > 20000:
-            raise MaxTransactionLimitError("Maximum number of transactions reached (20000)")
+            raise MaxTransactionLimitError(
+                "Maximum number of transactions reached (20000)"
+            )
 
-        tx = Transaction(counter=next_counter, amount=amount, currency=currency, reserved=reserved)
+        tx = Transaction(
+            counter=next_counter, amount=amount,
+            currency=currency, reserved=reserved
+        )
         self.transactions.append(tx)
         self.recalculate_footer()
         logger.info(
@@ -442,7 +462,9 @@ class FixedWidthFile:
 
     @classmethod
     def create_empty(cls, name="", surname="", patronymic="", address=""):
-        header = Header(name=name, surname=surname, patronymic=patronymic, address=address)
-        footer = Footer(total_counter=0, control_sum=Decimal(0), reserved="")
+        header = Header(
+            name=name, surname=surname, patronymic=patronymic, address=address)
+        footer = Footer(
+            total_counter=0, control_sum=Decimal(0), reserved="")
         logger.info("Created empty FixedWidthFile")
         return cls(header=header, transactions=[], footer=footer)

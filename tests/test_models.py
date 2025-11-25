@@ -18,11 +18,10 @@ def test_header_default_values():
 
 def test_transaction_default_values():
     tx = Transaction(counter="5", amount="1000", currency="PLN")
-    # coerce_types powinno wykonać się w __post_init__
     assert isinstance(tx.counter, int)
     assert tx.counter == 5
     assert isinstance(tx.amount, Decimal)
-    assert tx.amount == Decimal("10.00")  # 1000 groszy -> 10.00
+    assert tx.amount == Decimal("10.00")
     assert tx.currency == "PLN"
 
 def test_footer_default_values():
@@ -92,13 +91,13 @@ def test_delete_record_invalid_index():
 def test_set_record_readonly_field():
     fw = make_sample_file()
     with pytest.raises(ReadOnlyFieldUpdateError):
-        fw.set_record(1, {"counter": 5})  # counter jest readonly według READONLY_FIELDS
+        fw.set_record(1, {"counter": 5})
 
 def test_set_record_atomic_update():
     fw = make_sample_file()
     old_amount = fw.transactions[0].amount
     with pytest.raises(AtomicUpdateError):
-        fw.set_record(1, {"amount": "-100"})  # walidacja powinna rzucić, rollback
+        fw.set_record(1, {"amount": "-100"})
     # wartość powinna pozostać niezmieniona
     assert fw.transactions[0].amount == old_amount
 
@@ -120,6 +119,6 @@ def test_validate_full_file():
 
 def test_validate_full_file_with_errors():
     fw = make_sample_file()
-    fw.transactions[0].counter = 0  # złe dane
+    fw.transactions[0].counter = 0
     errors = fw.validate(verbose=False)
     assert any("Transaction 1" in e for e in errors)

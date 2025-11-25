@@ -25,16 +25,10 @@ def handle_open():
     footer_raw = raw_lines[-1]
     tx_raw_lines = raw_lines[1:-1]
 
-
-    # ==========================
-    # HEADER
-    # ==========================
     print(C.Y + "HEADER" + C.RESET)
-
     print(C.C +
           f"{'field_id':>8} {'name':>28} {'surname':>30} {'patronymic':>30} {'address':>24}" +
           C.RESET)
-
     def split_header(line):
         return [
             line[0:2].strip(),
@@ -46,14 +40,10 @@ def handle_open():
     h = split_header(header_raw)
     print(f"{h[0]:>8} {h[1]:>28} {h[2]:>30} {h[3]:>30} {h[4]:>24}")
 
-    # ==========================
-    # TRANSACTIONS
-    # ==========================
     print(C.Y + "TRANSACTION" + C.RESET)
     print(C.C +
           f"{'field_id':>8} {'counter':>7} {'amount':>12} {'currency':>8} {'reserved':<85}" +
           C.RESET)
-
     def split_tx(line):
         return [
             line[0:2].strip(),
@@ -70,15 +60,10 @@ def handle_open():
     if len(tx_raw_lines) > 5:
         print(C.Y + f"... skipped {len(tx_raw_lines) - 5} transactions ..." + C.RESET)
 
-
-    # ==========================
-    # FOOTER
-    # ==========================
     print(C.Y + "FOOTER" + C.RESET)
     print(C.C +
           f"{'field_id':>8} {'total_cnt':>10} {'control_sum':>12} {'reserved':<90}" +
           C.RESET)
-
     def split_footer(line):
         return [
             line[0:2].strip(),

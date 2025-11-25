@@ -77,7 +77,6 @@ def edit_readonly_fields(fw=None):
         if choice == "3":
             break
         elif choice == "1":
-            # Pola do dodania = wszystkie pola w obiekcie minus bazowe i już dodatkowe
             available_fields = [f for f in obj.__dataclass_fields__.keys()
                                 if f not in base_fields and f not in current_additional]
             if not available_fields:
@@ -133,7 +132,6 @@ def edit_allowed_currencies():
             if invalid:
                 print(C.R + f"Invalid tickers (must be 3 letters): {invalid}" + C.RESET)
                 continue
-            # dodajemy tylko te, których jeszcze nie ma
             for c in new_list:
                 if c not in ALLOWED_CURRENCIES:
                     ALLOWED_CURRENCIES.append(c)

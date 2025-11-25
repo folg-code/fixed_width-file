@@ -2,9 +2,6 @@ from core.const import C
 
 
 def handle_validate_loaded(fw):
-    """
-    Łączy walidację danych i błędów odczytu linii, wyświetla w CLI.
-    """
     data_errors = fw.validate(verbose=False)
     line_errors = []
 

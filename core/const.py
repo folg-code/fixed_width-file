@@ -1,6 +1,4 @@
-
 LINE_LENGTH = 120
-
 
 FILE_STRUCTURE = {
     "header": {
@@ -42,5 +40,3 @@ READONLY_FIELDS = {
 }
 
 ALLOWED_CURRENCIES = ["PLN", "EUR", "USD", "GBP"]
-
-
