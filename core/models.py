@@ -1,332 +1,346 @@
 import logging
+from decimal import Decimal, ROUND_HALF_UP
+from typing import ClassVar, Dict, Any, List, Tuple
 
-from dataclasses import dataclass
-from decimal import Decimal
-from typing import List, Dict
+from pydantic import BaseModel, Field, field_validator, model_validator
 
-from core.const import (
-    ALLOWED_CURRENCIES, READONLY_FIELDS,
-    C, FILE_STRUCTURE, LINE_LENGTH
-)
-from core.errors import (
-    LineLengthMismatch, FileReadError, FileWriteError,
-    InvalidRecordIndexError, ReadOnlyFieldUpdateError,
-    AmountTooLargeError, MaxTransactionLimitError,
-    AtomicUpdateError, ValidationError, FooterValidationError,
-    TransactionValidationError, HeaderValidationError,
-    EmptyFileError)
+from core.const import FILE_STRUCTURE, ALLOWED_CURRENCIES, LINE_LENGTH, READONLY_FIELDS
+from core.errors import HeaderValidationError, TransactionValidationError, FooterValidationError, LineLengthMismatch, \
+    InvalidRecordIndexError, MaxTransactionLimitError, AmountTooLargeError, AtomicUpdateError, ValidationError, \
+    ReadOnlyFieldUpdateError
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class FixedWidthRecord:
-
-    def __post_init__(self):
-        self.coerce_types([])
-
-    def coerce_types(self, errors: list[str]):
-
-        for fname, finfo in self.FIELD_DEF.items():
-            val = getattr(self, fname)
-            field_type = finfo.get("type", "str")
-
-            if field_type == "int":
-                if isinstance(val, int):
-                    continue
-                try:
-                    coerced = int(str(val).strip()) if str(val).strip() != "" else 0
-                    setattr(self, fname, coerced)
-                except Exception:
-                    msg = f"IntegerCoercionError: {self.__class__.__name__}.{fname}: cannot parse '{val}' as int"
-                    errors.append(msg)
-                    setattr(self, fname, 0)
-
-            elif field_type == "decimal":
-                if isinstance(val, Decimal):
-                    continue
-                try:
-                    sval = str(val).strip()
-                    if sval == "":
-                        setattr(self, fname, Decimal(0))
-                    else:
-                        cents = int(sval)
-                        setattr(self, fname, Decimal(cents) / Decimal(100))
-                except Exception:
-                    msg = f"DecimalCoercionError: {self.__class__.__name__}.{fname}: cannot parse '{val}' as decimal (expected cents int)"
-                    errors.append(msg)
-                    setattr(self, fname, Decimal(0))
-
-            else:
-                continue
+class FixedWidthRecord(BaseModel):
+    class Config:
+        validate_assignment = True
+        arbitrary_types_allowed = True
 
     @classmethod
-    def read_line(cls, line: str):
-
+    def read_line(cls, line: str) -> Tuple["FixedWidthRecord", List[str]]:
         errors: List[str] = []
         if len(line) != LINE_LENGTH:
-            raise LineLengthMismatch(
-                f"{cls.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}"
-            )
+            errors.append(f"{cls.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}")
+            defaults = {fname: finfo.get("value", "") for fname, finfo in cls.FIELD_DEF.items()}
+            obj = cls.model_construct(**defaults)
+            return obj, errors
 
         start = 0
-        field_values: Dict[str, str] = {}
+        data: Dict[str, Any] = {}
         for fname, finfo in cls.FIELD_DEF.items():
             width = finfo["width"]
-            raw = line[start:start + width]
+            raw = line[start:start+width]
             start += width
             if "value" in finfo:
-                value = raw.strip()
-                if value != finfo["value"]:
-                    errors.append(f"{cls.__name__}.{fname}: expected '{finfo['value']}', got '{value}'")
+                got = raw.strip()
+                expected = finfo["value"]
+                if got != expected:
+                    errors.append(f"{cls.__name__}.{fname}: expected '{expected}', got '{got}'")
+                data[fname] = expected
             else:
-                value = raw.strip()
-            field_values[fname] = value
-
-        obj = cls(**field_values)
-        obj.coerce_types(errors)
+                data[fname] = raw.strip()
+        try:
+            obj = cls(**data)
+        except Exception as e:
+            errors.append(f"{cls.__name__} instantiation error: {e}")
+            obj = cls.model_construct(**data)
         return obj, errors
 
     def write_line(self) -> str:
-        parts = []
+        parts: List[str] = []
         for fname, finfo in self.FIELD_DEF.items():
-            val = getattr(self, fname)
             width = finfo["width"]
-            field_type = finfo.get("type", "str")
-
             if "value" in finfo:
-                val = finfo["value"]
-            elif field_type == "int":
-                val = str(int(val)).zfill(width)
-            elif field_type == "decimal":
+                parts.append(str(finfo["value"]).ljust(width)[:width])
+                continue
+
+            val = getattr(self, fname)
+            ftype = finfo.get("type", "str")
+            if ftype == "int":
+                s = str(int(val)).zfill(width)
+            elif ftype == "decimal":
                 cents = int((Decimal(val) * 100).to_integral_value())
-                val = str(cents).zfill(width)
+                s = str(cents).zfill(width)
             else:
-                val = str(val).ljust(width)
-            parts.append(val)
+                s = str(val).ljust(width)[:width]
+            parts.append(s)
 
         line = "".join(parts)
         if len(line) != LINE_LENGTH:
-            raise LineLengthMismatch(
-                f"{self.__class__.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}")
+            raise LineLengthMismatch(f"{self.__class__.__name__} line length mismatch: expected {LINE_LENGTH}, got {len(line)}")
         return line
 
-    def validate_fields(self):
-        errors = []
+    @classmethod
+    def coerce_int(cls, v, field_name: str):
+        if v is None or v == "":
+            return 0
+        return int(v)
+
+    @classmethod
+    def coerce_decimal(cls, v, field_name: str):
+        if isinstance(v, Decimal):
+            return v
+        s = str(v).strip()
+        if s == "":
+            return Decimal(0)
+        return Decimal(int(s)) / Decimal(100)
+
+    def validate_fields_length(self) -> List[str]:
+        errs = []
         for fname, finfo in self.FIELD_DEF.items():
-            width = finfo["width"]
             val = getattr(self, fname)
-            if len(str(val)) > width:
-                errors.append(f"{fname}: length {len(str(val))} > {width}")
-        return errors
+            if len(str(val)) > finfo["width"]:
+                errs.append(f"{fname}: length {len(str(val))} > {finfo['width']}")
+        return errs
 
-
-@dataclass
 class Header(FixedWidthRecord):
-    FIELD_DEF = FILE_STRUCTURE["header"]
-    field_id: str = FILE_STRUCTURE["header"]["field_id"]["value"]
-    name: str = ""
-    surname: str = ""
-    patronymic: str = ""
-    address: str = ""
+    FIELD_DEF: ClassVar[dict] = FILE_STRUCTURE["header"]
+    field_id: str = Field(FILE_STRUCTURE["header"]["field_id"]["value"])
+    name: str = Field("")
+    surname: str = Field("")
+    patronymic: str = Field("")
+    address: str = Field("")
 
-    def validate(self):
-        errors = self.validate_fields()
+    @model_validator(mode="after")
+    def business_validate(self):
+        errs = []
         if not self.name:
-            errors.append("Header: name jest pusty")
+            errs.append("Header: name is empty")
         if not self.surname:
-            errors.append("Header: surname jest pusty")
+            errs.append("Header: surname is empty")
+        flen = self.validate_fields_length()
+        if flen:
+            errs.extend(flen)
+        if errs:
+            raise HeaderValidationError("; ".join(errs))
+        return self
 
-        if errors:
-            raise HeaderValidationError("; ".join(errors))
 
-
-@dataclass
 class Transaction(FixedWidthRecord):
-    FIELD_DEF = FILE_STRUCTURE["transaction"]
-    field_id: str = FILE_STRUCTURE["transaction"]["field_id"]["value"]
-    counter: int = 0
-    amount: Decimal = Decimal(0)
-    currency: str = ""
-    reserved: str = ""
+    FIELD_DEF: ClassVar[dict] = FILE_STRUCTURE["transaction"]
+    field_id: str = Field(FILE_STRUCTURE["transaction"]["field_id"]["value"])
+    counter: int = Field(0)
+    amount: Decimal = Field(Decimal("0.00"))
+    currency: str = Field("")
+    reserved: str = Field("")
 
-    def validate(self):
-        errors = self.validate_fields()
+    @field_validator("counter", mode="before")
+    def _coerce_counter(cls, v):
+        return cls.coerce_int(v, "counter")
+
+    @field_validator("amount", mode="before")
+    def _coerce_amount(cls, v):
+        return cls.coerce_decimal(v, "amount")
+
+    @model_validator(mode="after")
+    def business_validate(self):
+        errs = []
+        flen = self.validate_fields_length()
+        if flen:
+            errs.extend(flen)
         if self.counter <= 0:
-            errors.append("Transaction counter <= 0")
+            errs.append("Transaction counter <= 0")
+        if not isinstance(self.amount, Decimal) or self.amount <= 0:
+            errs.append(f"Transaction amount must be positive: {self.amount}")
         if self.currency not in ALLOWED_CURRENCIES:
-            errors.append(
-                f"Transaction currency '{self.currency}' niepoprawna"
-            )
-        if self.amount <= 0:
-            errors.append(
-                f"Transaction amount must be positive: {self.amount}"
-            )
-
-        if errors:
-            raise TransactionValidationError("; ".join(errors))
+            errs.append(f"Transaction currency '{self.currency}' not allowed")
+        if errs:
+            raise TransactionValidationError("; ".join(errs))
+        return self
 
 
-@dataclass
 class Footer(FixedWidthRecord):
-    FIELD_DEF = FILE_STRUCTURE["footer"]
-    field_id: str = FILE_STRUCTURE["footer"]["field_id"]["value"]
-    total_counter: int = 0
-    control_sum: Decimal = Decimal(0)
-    reserved: str = ""
+    FIELD_DEF: ClassVar[dict] = FILE_STRUCTURE["footer"]
+    field_id: str = Field(FILE_STRUCTURE["footer"]["field_id"]["value"])
+    total_cnt: int = Field(0)
+    control_sum: Decimal = Field(Decimal("0.00"))
+    reserved: str = Field("")
 
-    def validate(self):
-        errors = self.validate_fields()
-        if self.total_counter < 0:
-            errors.append(f"Footer total_counter < 0: {self.total_counter}")
+    @field_validator("total_cnt", mode="before")
+    def _coerce_total_cnt(cls, v):
+        return cls.coerce_int(v, "total_cnt")
+
+    @field_validator("control_sum", mode="before")
+    def _coerce_control_sum(cls, v):
+        return cls.coerce_decimal(v, "control_sum")
+
+    @model_validator(mode="after")
+    def business_validate(self):
+        errs = []
+        flen = self.validate_fields_length()
+        if flen:
+            errs.extend(flen)
+        if self.total_cnt < 0:
+            errs.append("Footer total_cnt < 0")
         if self.control_sum < 0:
-            errors.append(f"Footer control_sum < 0: {self.control_sum}")
-        if errors:
-            raise FooterValidationError("; ".join(errors))
-
+            errs.append("Footer control_sum < 0")
+        if errs:
+            raise FooterValidationError("; ".join(errs))
+        return self
 
 class FixedWidthFile:
-    def __init__(
-            self,
-            header: Header,
-            transactions: List[Transaction],
-            footer: Footer
-    ) -> None :
+    def __init__(self, header: Header, transactions: List[Transaction], footer: Footer):
         self.header = header
         self.transactions = transactions
         self.footer = footer
+        self._read_errors: Dict[str, Any] = {"header": [], "transactions": [], "footer": []}
 
     @property
-    def total_counter(self) -> int:
+    def total_cnt(self) -> int:
         return len(self.transactions)
 
     @property
     def control_sum(self) -> Decimal:
-        return sum(t.amount for t in self.transactions)
+        return sum((t.amount for t in self.transactions), Decimal(0))
 
     @classmethod
-    def read_file(cls, path: str):
-        _read_errors = {"header": [], "transactions": [], "footer": []}
-
+    def read_file(cls, path: str) -> "FixedWidthFile":
         try:
-            with open(path, "r", newline=None, encoding="utf-8") as f:
-                lines = [line.rstrip("\r\n") for line in f]
+            lines = cls._read_lines(path)
         except Exception as e:
-            logger.exception("Błąd odczytu pliku %s", path)
-            raise FileReadError(f"Cannot read file {path}: {e}")
+            logger.exception("Cannot read file %s", path)
+            raise
 
         if len(lines) < 2:
-            raise EmptyFileError(f"File too short: {len(lines)} lines")
+            raise ValueError("File too short")
 
-        # --- Header ---
-        header = None
-        try:
-            try:
-                header, errors = Header.read_line(lines[0])
-                if errors:
-                    _read_errors["header"].extend(errors)
-            except LineLengthMismatch as e:
-                _read_errors["header"].append(str(e))
-                header = None
-        except Exception as e:
-            _read_errors["header"].append(str(e))
-            header = None
+        read_errs = {"header": [], "transactions": [], "footer": []}
 
-        # --- Footer ---
-        footer = None
-        try:
-            try:
-                footer, errors = Footer.read_line(lines[-1])
-                if errors:
-                    _read_errors["footer"].extend(errors)
-            except LineLengthMismatch as e:
-                _read_errors["footer"].append(str(e))
-                footer = None
-        except Exception as e:
-            _read_errors["footer"].append(str(e))
-            footer = None
+        header_obj, header_errs = cls._parse_header(lines[0])
+        read_errs["header"].extend(header_errs)
 
-        # --- Transactions ---
-        transactions: List[Transaction] = []
-        for idx, line in enumerate(lines[1:-1], start=1):
-            try:
-                tx, errors = Transaction.read_line(line)
-                transactions.append(tx)
-                if errors:
-                    _read_errors["transactions"].append((idx, errors))
-            except LineLengthMismatch as e:
-                # traktujemy to jako błąd struktury dla danej linii
-                _read_errors["transactions"].append((idx, [str(e)]))
-                placeholder_vals = {k: "" for k in Transaction.FIELD_DEF.keys()}
-                tx = Transaction(**placeholder_vals)
-                transactions.append(tx)
-            except Exception as e:
-                _read_errors["transactions"].append((idx, [str(e)]))
-                placeholder_vals = {k: "" for k in Transaction.FIELD_DEF.keys()}
-                tx = Transaction(**placeholder_vals)
-                transactions.append(tx)
+        footer_obj, footer_errs = cls._parse_footer(lines[-1])
+        read_errs["footer"].extend(footer_errs)
 
-        fw = cls(header, transactions, footer)
-        fw._read_errors = _read_errors
+        txs, tx_errs = cls._parse_transactions(lines[1:-1])
+        read_errs["transactions"].extend(tx_errs)
 
-        if any(_read_errors.values()):
-            logger.warning(
-                "File loaded, but errors were found in structure/content"
-            )
+        fw = cls(header_obj, txs, footer_obj)
+        fw._read_errors = read_errs
+
+        if any(read_errs.values()):
+            logger.warning("File loaded with read/parse errors")
         else:
-            logger.info("File loaded successfully (structure OK)")
+            logger.info("File loaded OK")
 
         return fw
 
-    def validate(self, verbose=True):
+    @staticmethod
+    def _read_lines(path: str) -> list[str]:
+        with open(path, "r", encoding="utf-8", newline=None) as fh:
+            return [ln.rstrip("\r\n") for ln in fh]
 
-        errors = []
+    @staticmethod
+    def _parse_header(line: str) -> tuple[Header, list[str]]:
+        try:
+            obj, errs = Header.read_line(line)
+        except Exception as e:
+            obj, errs = None, [str(e)]
+        return obj, errs
 
-        # --- Header ---
-        if self.header:
+    @staticmethod
+    def _parse_footer(line: str) -> tuple[Footer, list[str]]:
+        try:
+            obj, errs = Footer.read_line(line)
+        except Exception as e:
+            obj, errs = None, [str(e)]
+        return obj, errs
+
+    @staticmethod
+    def _parse_transactions(lines: list[str]) -> tuple[list[Transaction], list[tuple[int, list[str]]]]:
+        txs = []
+        errs: list[tuple[int, list[str]]] = []
+        for idx, ln in enumerate(lines, start=1):
             try:
-                self.header.validate()
-            except HeaderValidationError as e:
-                print("DEBUG HEADER ERROR:", e)
-                errors.append(f"Header validation error: {e}")
+                obj, e = Transaction.read_line(ln)
+                txs.append(obj)
+                if e:
+                    errs.append((idx, e))
+            except Exception as ex:
+                errs.append((idx, [str(ex)]))
+                txs.append(Transaction(counter=0, amount=Decimal(0), currency="", reserved=""))
+        return txs, errs
 
-        # --- Transactions ---
+    def _validate_header(self) -> List[str]:
+        errs: List[str] = []
+        if self.header is None:
+            errs.append("Header: missing or invalid")
+        else:
+            try:
+                self.header.business_validate()
+            except HeaderValidationError as e:
+                errs.append(str(e))
+        return errs
+
+    def _validate_transactions(self) -> List[str]:
+        errs: List[str] = []
         for i, tx in enumerate(self.transactions, start=1):
             try:
-                tx.validate()
+                tx.business_validate()
             except TransactionValidationError as e:
-                errors.append(f"Transaction {i}: {e}")
+                errs.append(f"Transaction {i}: {e}")
+        return errs
 
-        # --- Footer ---
-        if self.footer:
-            try:
-                self.footer.validate()
-            except FooterValidationError as e:
-                errors.append(str(e))
+    def _validate_footer(self) -> List[str]:
+        errs: List[str] = []
+        if self.footer is None:
+            errs.append("Footer: missing or invalid")
         else:
-            errors.append("Footer: missing or invalid")
+            try:
+                self.footer.business_validate()
+            except FooterValidationError as e:
+                errs.append(str(e))
+
+            # Sprawdzenie spójności
+            actual_count = len(self.transactions)
+            actual_sum = sum((t.amount for t in self.transactions), Decimal(0))
+            if getattr(self.footer, "total_cnt", None) != actual_count:
+                errs.append(f"Footer total_cnt ({getattr(self.footer,'total_cnt')}) != transaction count ({actual_count})")
+            if getattr(self.footer, "control_sum", None) != actual_sum:
+                errs.append(f"Footer control_sum ({getattr(self.footer,'control_sum')}) != transaction sum ({actual_sum})")
+        return errs
+
+    def _append_read_errors(self, errors: List[str]) -> None:
+        if not hasattr(self, "_read_errors"):
+            return
+        re = self._read_errors
+        for err in re.get("header", []):
+            errors.append(f"Header: {err}")
+        for idx, tx_errs in re.get("transactions", []):
+            for e in tx_errs:
+                errors.append(f"Transaction {idx}: {e}")
+        for err in re.get("footer", []):
+            errors.append(f"Footer: {err}")
+
+    def validate(self, verbose: bool = True) -> List[str]:
+        errors: List[str] = []
+        errors.extend(self._validate_header())
+        errors.extend(self._validate_transactions())
+        errors.extend(self._validate_footer())
+        self._append_read_errors(errors)
 
         if verbose:
             if errors:
-                print(C.R + "Data validation errors:" + C.RESET)
+                print("ERRORS:")
                 for e in errors:
-                    print(C.R + " - " + e + C.RESET)
+                    print(" -", e)
             else:
-                print(C.G + "File data is valid." + C.RESET)
+                print("NO ERRORS.")
 
         return errors
 
-    def write_file(self, path: str):
+    def write_file(self, path: str) -> None:
         try:
-            with open(path, "w", encoding="utf-8", newline="\n") as f:
-                f.write(self.header.write_line() + "\n")
+            with open(path, "w", encoding="utf-8", newline="\n") as fh:
+                fh.write(self.header.write_line() + "\n")
                 for t in self.transactions:
-                    f.write(t.write_line() + "\n")
-                f.write(self.footer.write_line() + "\n")
-            logger.info("File saved successfully: %s", path)
+                    fh.write(t.write_line() + "\n")
+                fh.write(self.footer.write_line() + "\n")
+            logger.info("File saved: %s", path)
         except Exception as e:
-            logger.exception("Failed to save file %s", path)
-            raise FileWriteError(f"Cannot write file {path}: {e}")
+            logger.exception("Failed to write file %s", path)
+            raise
 
     def get_record(self, record_index: int, field_name: str):
         if record_index == 0:
@@ -345,17 +359,17 @@ class FixedWidthFile:
 
         if record_index == 0:
             obj = self.header
-            readonly = READONLY_FIELDS[0]
+            readonly = READONLY_FIELDS["header"]
         elif record_index == -1:
             obj = self.footer
-            readonly = READONLY_FIELDS[-1]
+            readonly = READONLY_FIELDS["footer"]
         else:
             if not (1 <= record_index <= len(self.transactions)):
                 raise InvalidRecordIndexError(
                     f"Invalid transaction index: {record_index}"
                 )
             obj = self.transactions[record_index - 1]
-            readonly = READONLY_FIELDS["tx"]
+            readonly = READONLY_FIELDS["txn"]
 
         for f in updates:
             if f in readonly:
@@ -373,14 +387,14 @@ class FixedWidthFile:
 
                 setattr(obj, field, value)
 
-            field_len_errors = obj.validate_fields()
+            field_len_errors = obj.validate_fields_length()
             if field_len_errors:
                 raise AtomicUpdateError(
                     f"Field length validation failed: {field_len_errors}"
                 )
 
             try:
-                obj.validate()
+                obj.business_validate()
             except ValidationError as e:
                 raise AtomicUpdateError(
                     f"Business validation failed after update: {e}"
@@ -454,33 +468,17 @@ class FixedWidthFile:
         )
 
     def recalculate_footer(self):
-        if not hasattr(self, "footer") or self.footer is None:
+        if not self.footer:
             raise ValueError("Footer record is missing")
+        self.footer.total_cnt = len(self.transactions)
+        self.footer.control_sum = sum(t.amount for t in self.transactions)
 
-        total_count = len(self.transactions)
-        total_amount_cents = 0
-
-        for tx in self.transactions:
-            # amount w tx jest Decimal w jednostkach zł / usd / etc.
-            # żeby dostać grosze, mnożymy *100 i zamieniamy na int
-            total_amount_cents += int((tx.amount * 100).to_integral_value())
-
-        # footer: total_cnt jako int, control_sum jako Decimal w groszach
-        self.footer.total_cnt = total_count
-        # ustawiamy control_sum **bez dzielenia przez 100**, bo write_line zajmie się formatowaniem
-        self.footer.control_sum = Decimal(total_amount_cents)
-
-        logger.info(
-            "Footer recalculated: total_cnt=%d, control_sum=%s",
-            self.footer.total_cnt,
-            self.footer.control_sum,
-        )
 
     @classmethod
     def create_empty(cls, name="", surname="", patronymic="", address=""):
         header = Header(
             name=name, surname=surname, patronymic=patronymic, address=address)
         footer = Footer(
-            total_counter=0, control_sum=Decimal(0), reserved="")
+            total_cnt=0, control_sum=Decimal(0), reserved="")
         logger.info("Created empty FixedWidthFile")
         return cls(header=header, transactions=[], footer=footer)

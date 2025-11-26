@@ -11,4 +11,4 @@ def show_transactions(transactions, max_rows=5):
 
 def show_footer(footer):
     print("FOOTER")
-    print(f"Total counter: {footer.total_counter}, Control sum: {footer.control_sum}, Reserved: {footer.reserved}")
+    print(f"Total counter: {footer.total_cnt}, Control sum: {footer.control_sum}, Reserved: {footer.reserved}")

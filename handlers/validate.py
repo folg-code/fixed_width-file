@@ -1,4 +1,4 @@
-from core.const import C
+from core.const import Colors
 
 
 def handle_validate_loaded(fw):
@@ -16,8 +16,8 @@ def handle_validate_loaded(fw):
     all_errors = line_errors + data_errors
 
     if all_errors:
-        print(C.R + "Errors found:" + C.RESET)
+        print(Colors.RED.value+ "Errors found:" + Colors.RESET.value)
         for e in all_errors:
-            print(C.R + " - " + e + C.RESET)
+            print(Colors.RED.value+ " - " + e + Colors.RESET.value)
     else:
-        print(C.G + "No errors found." + C.RESET)
+        print(Colors.GREEN.value + "No errors found." + Colors.RESET.value)

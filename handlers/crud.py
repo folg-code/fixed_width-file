@@ -1,22 +1,19 @@
-import logging
 import os
 from decimal import Decimal, ROUND_HALF_UP
 
-from core.config_logging import setup_logging
-from core.const import  C, READONLY_FIELDS
+from core.const import READONLY_FIELDS, Colors
 from core.models import FixedWidthFile, logger, Header, Footer
 from ui.selection import select_currency, select_field, select_record
 
-setup_logging()
 
 
 # ---------------- CREATE ----------------
 def create_file():
-    print(C.C + "Create file..." + C.RESET)
+    print(Colors.CYAN.value + "Create file..." + Colors.RESET.value)
     path = input("File path: ").strip()
     if os.path.exists(path):
         if input("File exists. Overwrite? (y/n): ") != "y":
-            print(C.Y + "Cancelled." + C.RESET)
+            print(Colors.YELLOW.value + "Cancelled." + Colors.RESET.value)
             return
     print("Set Header:")
     name = input("Name: ").strip()
@@ -25,18 +22,27 @@ def create_file():
     address = input("Address: ").strip()
 
     fw = FixedWidthFile(
-        header=Header(name, surname, patronymic, address),
+        header=Header(
+            name=name,
+            surname=surname,
+            patronymic=patronymic,
+            address=address
+        ),
         transactions=[],
-        footer=Footer(0, Decimal("0.00"), ""),
+        footer=Footer(
+            total_cnt=0,
+            control_sum=Decimal("0.00"),
+            reserved=""
+        ),
     )
     try:
         fw.write_file(path)
     except Exception as e:
-        print(C.R + f"Failed to create file: {e}" + C.RESET)
+        print(Colors.RED.value+ f"Failed to create file: {e}" + Colors.RESET.value)
         logger.exception("Failed to create file %s", path)
         return
 
-    print(C.G + "A new file has been created." + C.RESET)
+    print(Colors.GREEN.value + "A new file has been created." + Colors.RESET.value)
     return fw, path
 
 
@@ -45,7 +51,7 @@ def add_transaction(fw: FixedWidthFile):
         amount_str = input("Amount (e.g. 123.45): ").strip()
         amount = Decimal(amount_str)
     except Exception as e:
-        print(C.R + f"Invalid amount '{amount_str}': {e}" + C.RESET)
+        print(Colors.RED.value+ f"Invalid amount '{amount_str}': {e}" + Colors.RESET.value)
         logger.warning("Invalid amount input: %s (%s)", amount_str, e)
         return
 
@@ -55,16 +61,16 @@ def add_transaction(fw: FixedWidthFile):
 
     try:
         fw.add_transaction(amount, currency)
-        print(C.G + f"Transaction added ({currency})." + C.RESET)
+        print(Colors.GREEN.value + f"Transaction added ({currency})." + Colors.RESET.value)
         logger.info(
             "Transaction added: counter=%d amount=%s currency=%s",
             fw.transactions[-1].counter, amount, currency
         )
     except ValueError as e:
-        print(C.R + f"Validation failed: {e}" + C.RESET)
+        print(Colors.RED.value+ f"Validation failed: {e}" + Colors.RESET.value)
         logger.warning("Validation failed adding transaction: %s", e)
     except Exception as e:
-        print(C.R + "Unexpected error." + C.RESET)
+        print(Colors.RED.value+ "Unexpected error." + Colors.RESET.value)
         logger.exception("Unexpected error adding transaction: %s", e)
 
 
@@ -74,13 +80,13 @@ def get_field(fw: FixedWidthFile):
     if idx is None:
         return
 
-    # pola zależnie od rekordu
+
     if idx == 0:
-        fields = list(fw.header.__dataclass_fields__.keys())
+        fields = list(fw.header.model_fields.keys())
     elif idx == -1:
-        fields = list(fw.footer.__dataclass_fields__.keys())
+        fields = list(fw.footer.model_fields.keys())
     else:
-        fields = list(fw.transactions[0].__dataclass_fields__.keys())
+        fields = list(fw.transactions[0].model_fields.keys())
 
     field = select_field(fields)
     if not field:
@@ -88,24 +94,24 @@ def get_field(fw: FixedWidthFile):
 
     try:
         val = fw.get_record(idx, field)
-        print(C.C + f"{field} = {val}" + C.RESET)
+        print(Colors.CYAN.value + f"{field} = {val}" + Colors.RESET.value)
     except Exception as e:
-        print(C.R + f"Error reading field '{field}': {e}." + C.RESET)
+        print(Colors.RED.value+ f"Error reading field '{field}': {e}." + Colors.RESET.value)
         logger.exception("Error reading record %s[%s]: %s", idx, field, e)
 
 
 def list_transactions(fw: FixedWidthFile, page_size: int = 10):
     if not fw.transactions:
-        print(C.Y + "No transactions." + C.RESET)
+        print(Colors.YELLOW.value + "No transactions." + Colors.RESET.value)
         return
 
     total = len(fw.transactions)
     pages = (total + page_size - 1) // page_size
 
     print_header = (
-        C.C +
+        Colors.CYAN.value +
         f"{'field_id':>8} {'counter':>7} {'amount':>15} {'currency':>8} {'reserved':<60}" +
-        C.RESET
+        Colors.RESET.value
     )
 
     page = 0
@@ -114,13 +120,11 @@ def list_transactions(fw: FixedWidthFile, page_size: int = 10):
         end = min(start + page_size, total)
 
         print()
-        print(C.Y + f"TRANSACTION — page {page+1}/{pages}" + C.RESET)
+        print(Colors.YELLOW.value + f"TRANSACTION — page {page+1}/{pages}" + Colors.RESET.value)
         print(print_header)
 
         for t in fw.transactions[start:end]:
             counter_str = str(t.counter).zfill(6)
-
-            # amount jako Decimal z 2 miejscami
             amt = t.amount
             if not isinstance(amt, Decimal):
                 try:
@@ -138,7 +142,7 @@ def list_transactions(fw: FixedWidthFile, page_size: int = 10):
                 f"{t.currency:>8} {reserved_display:<60}"
             )
 
-        print(C.Y + f"-- Page {page+1}/{pages} — records {start+1}-{end} of {total} --" + C.RESET)
+        print(Colors.YELLOW.value + f"-- Page {page+1}/{pages} — records {start+1}-{end} of {total} --" + Colors.RESET.value)
 
         if pages == 1:
             break
@@ -148,16 +152,16 @@ def list_transactions(fw: FixedWidthFile, page_size: int = 10):
             if page < pages - 1:
                 page += 1
             else:
-                print(C.Y + "Already last page." + C.RESET)
+                print(Colors.YELLOW.value + "Already last page." + Colors.RESET.value)
         elif cmd == "p":
             if page > 0:
                 page -= 1
             else:
-                print(C.Y + "Already first page." + C.RESET)
+                print(Colors.YELLOW.value + "Already first page." + Colors.RESET.value)
         elif cmd in ("q", ""):
             break
         else:
-            print(C.R + "Unknown command." + C.RESET)
+            print(Colors.RED.value+ "Unknown command." + Colors.RESET.value)
 
 
 # ---------------- UPDATE ----------------
@@ -168,28 +172,28 @@ def set_field(fw: FixedWidthFile):
 
     if idx == 0:
         obj = fw.header
-        readonly = READONLY_FIELDS[0]
+        readonly = READONLY_FIELDS["header"]
     elif idx == -1:
         obj = fw.footer
-        readonly = READONLY_FIELDS[-1]
+        readonly = READONLY_FIELDS["footer"]
     else:
         obj = fw.transactions[idx - 1]
-        readonly = READONLY_FIELDS["tx"]
+        readonly = READONLY_FIELDS["txn"]
 
-    editable_fields = [f for f in obj.__dataclass_fields__ if f not in readonly]
+    editable_fields = [f for f in obj.model_fields if f not in readonly]
 
     print("Edit mode:")
     print("1. Single field")
     print("2. Full record")
     mode = input("> ").strip()
     if mode not in ("1", "2"):
-        print(C.R + "Invalid mode." + C.RESET)
+        print(Colors.RED.value+ "Invalid mode." + Colors.RESET.value)
         return
 
     # ===== Full record =====
     if mode == "2":
         updates = {}
-        print(C.Y + "Editing full record (ENTER to skip a field)." + C.RESET)
+        print(Colors.YELLOW.value + "Editing full record (ENTER to skip a field)." + Colors.RESET.value)
         for f in editable_fields:
             old_val = getattr(obj, f)
             if f == "currency":
@@ -204,14 +208,14 @@ def set_field(fw: FixedWidthFile):
             updates[f] = val
 
         if not updates:
-            print(C.Y + "No changes." + C.RESET)
+            print(Colors.YELLOW.value + "No changes." + Colors.RESET.value)
             return
 
         try:
             fw.set_record(idx, updates)
-            print(C.G + "Record updated." + C.RESET)
+            print(Colors.GREEN.value + "Record updated." + Colors.RESET.value)
         except Exception as e:
-            print(C.R + "Failed to update record." + C.RESET)
+            print(Colors.RED.value+ "Failed to update record." + Colors.RESET.value)
             logger.exception("Failed updating record %s: %s", idx, e)
         return
 
@@ -231,19 +235,19 @@ def set_field(fw: FixedWidthFile):
 
     try:
         fw.set_record(idx, {field: val})
-        print(C.G + f"Field '{field}' updated." + C.RESET)
+        print(Colors.GREEN.value + f"Field '{field}' updated." + Colors.RESET.value)
     except ValueError as e:
-        print(C.R + f"Invalid value: {e}" + C.RESET)
+        print(Colors.RED.value+ f"Invalid value: {e}" + Colors.RESET.value)
         logger.warning("Updating record %s[%s] failed: %s", idx, field, e)
     except Exception as e:
-        print(C.R + "Unexpected error." + C.RESET)
+        print(Colors.RED.value+ "Unexpected error." + Colors.RESET.value)
         logger.exception("Updating record %s[%s] failed: %s", idx, field, e)
 
 
 # ---------------- DELETE ----------------
 def delete_transaction(fw: FixedWidthFile):
     if not fw.transactions:
-        print(C.Y + "No transactions to delete." + C.RESET)
+        print(Colors.YELLOW.value + "No transactions to delete." + Colors.RESET.value)
         return
 
     for i, tx in enumerate(fw.transactions, 1):
@@ -253,10 +257,10 @@ def delete_transaction(fw: FixedWidthFile):
         idx_str = input(f"Select transaction id (1-{len(fw.transactions)}): ").strip()
         idx = int(idx_str)
         fw.delete_record(idx)
-        print(C.G + f"Transaction {idx} deleted." + C.RESET)
+        print(Colors.GREEN.value + f"Transaction {idx} deleted." + Colors.RESET.value)
     except ValueError as e:
-        print(C.R + f"Invalid transaction id: {e}" + C.RESET)
+        print(Colors.RED.value+ f"Invalid transaction id: {e}" + Colors.RESET.value)
         logger.warning("Invalid transaction id input: %s (%s)", idx_str, e)
     except Exception as e:
-        print(C.R + "Unexpected error." + C.RESET)
+        print(Colors.RED.value+ "Unexpected error." + Colors.RESET.value)
         logger.exception("Unexpected error deleting transaction: %s", e)

@@ -1,4 +1,4 @@
-from core.const import C
+from core.const import Colors
 from core.models import FixedWidthFile
 from handlers.validate import handle_validate_loaded
 
@@ -9,26 +9,26 @@ def handle_open():
     try:
         fw = FixedWidthFile.read_file(path)
     except Exception as e:
-        print(C.R + f"Error: {e}" + C.RESET)
+        print(Colors.RED.value+ f"Error: {e}" + Colors.RESET.value)
         return None, None
 
-    print(C.G + "File loaded." + C.RESET)
+    print(Colors.GREEN.value + "File loaded." + Colors.RESET.value)
 
     try:
         with open(path, "r") as f:
             raw_lines = [line.rstrip("\n") for line in f.readlines()]
     except Exception as e:
-        print(C.R + f"Failed to read file: {e}" + C.RESET)
+        print(Colors.RED.value+ f"Failed to read file: {e}" + Colors.RESET.value)
         return fw, path
 
     header_raw = raw_lines[0]
     footer_raw = raw_lines[-1]
     tx_raw_lines = raw_lines[1:-1]
 
-    print(C.Y + "HEADER" + C.RESET)
-    print(C.C +
+    print(Colors.YELLOW.value + "HEADER" + Colors.RESET.value)
+    print(Colors.CYAN.value +
           f"{'field_id':>8} {'name':>28} {'surname':>30} {'patronymic':>30} {'address':>24}" +
-          C.RESET)
+          Colors.RESET.value)
     def split_header(line):
         return [
             line[0:2].strip(),
@@ -40,10 +40,10 @@ def handle_open():
     h = split_header(header_raw)
     print(f"{h[0]:>8} {h[1]:>28} {h[2]:>30} {h[3]:>30} {h[4]:>24}")
 
-    print(C.Y + "TRANSACTION" + C.RESET)
-    print(C.C +
+    print(Colors.YELLOW.value + "TRANSACTION" + Colors.RESET.value)
+    print(Colors.CYAN.value +
           f"{'field_id':>8} {'counter':>7} {'amount':>12} {'currency':>8} {'reserved':<85}" +
-          C.RESET)
+          Colors.RESET.value)
     def split_tx(line):
         return [
             line[0:2].strip(),
@@ -58,12 +58,12 @@ def handle_open():
         print(f"{t[0]:>8} {t[1]:>7} {t[2]:>12} {t[3]:>8} {t[4]:<85}")
 
     if len(tx_raw_lines) > 5:
-        print(C.Y + f"... skipped {len(tx_raw_lines) - 5} transactions ..." + C.RESET)
+        print(Colors.YELLOW.value + f"... skipped {len(tx_raw_lines) - 5} transactions ..." + Colors.RESET.value)
 
-    print(C.Y + "FOOTER" + C.RESET)
-    print(C.C +
+    print(Colors.YELLOW.value + "FOOTER" + Colors.RESET.value)
+    print(Colors.CYAN.value +
           f"{'field_id':>8} {'total_cnt':>10} {'control_sum':>12} {'reserved':<90}" +
-          C.RESET)
+          Colors.RESET.value)
     def split_footer(line):
         return [
             line[0:2].strip(),
@@ -76,7 +76,7 @@ def handle_open():
     print(f"{f[0]:>8} {f[1]:>10} {f[2]:>12} {f[3]:>90}")
     print()
 
-    print(C.Y + "\nVALIDATION" + C.RESET)
+    print(Colors.YELLOW.value + "\nVALIDATION" + Colors.RESET.value)
 
     handle_validate_loaded(fw)
 
