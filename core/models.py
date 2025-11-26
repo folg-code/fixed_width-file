@@ -292,7 +292,6 @@ class FixedWidthFile:
             except FooterValidationError as e:
                 errs.append(str(e))
 
-            # Sprawdzenie spójności
             actual_count = len(self.transactions)
             actual_sum = sum((t.amount for t in self.transactions), Decimal(0))
             if getattr(self.footer, "total_cnt", None) != actual_count:
